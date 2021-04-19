@@ -1,12 +1,8 @@
 package com.djax.ffmpeg.util;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.math.BigDecimal;
-import java.nio.channels.FileChannel;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
@@ -16,7 +12,7 @@ import org.springframework.stereotype.Component;
 @Component("dash")
 public class ConvertDASHUtil implements ConvertVideoUtil{
     @Value("${m3u8.ffmpegpath}")
-    private String ffmpegpath="D:\\myFiles\\ffmpeg\\bin\\ffmpeg.exe";  // Directory of ffmpeg.exe
+    private String ffmpegpath;  // Directory of ffmpeg.exe
 
     public boolean convert(String folderUrl, String fileName) {
         if (!checkfile(folderUrl + fileName)) {
