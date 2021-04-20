@@ -18,6 +18,7 @@ public class VideoClicksBuilder extends LinearBuilder {
 	}
 
 	public VideoClicksBuilder(Linear linear) {
+		linear.setVideoClicks(new VideoClicks());
 		videoClicks = linear.getVideoClicks();
 		clickThrough = new ClickThrough();
 		videoClicks.setClickThrough(clickThrough);

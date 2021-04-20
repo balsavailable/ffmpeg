@@ -11,7 +11,11 @@ public class CreativeBuilder {
 	private CompanionAdsBuilder companionAdsBuilder;
 
 	public CreativeBuilder() {
-		this.creative = new Creative();
+
+	}
+
+	public CreativeBuilder(Creative creative) {
+        this.creative=creative;
 		linearBuilder = new LinearBuilder(creative);
 		companionAdsBuilder = new CompanionAdsBuilder(creative);
 	}

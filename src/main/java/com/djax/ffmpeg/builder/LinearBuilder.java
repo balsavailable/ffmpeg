@@ -13,6 +13,7 @@ public class LinearBuilder extends CreativeBuilder {
 	private VideoClicksBuilder builder;
 
 	public LinearBuilder(Creative creative) {
+		creative.setLinear(new Linear());
 		linear = creative.getLinear();
 		linear.setTrackingEvents(new ArrayList<>());
 		linear.setMediaFiles(new ArrayList<>());
