@@ -9,9 +9,9 @@ public class Extension {
 	
 	private GeoExtension geoExtension;
 	private MetricExtension metricExtension;
-	private TrackingExtension trackingExtension;
+	private TrackingExtension showAdtrackingExtension;
 	private WaterFallExtension waterFallExtension;
-	
+	private TrackingExtension  videoAdTrackingExtension;
 	
 	public GeoExtension getGeoExtension() {
 		return geoExtension;
@@ -25,17 +25,23 @@ public class Extension {
 	public void setMetricExtension(MetricExtension metricExtension) {
 		this.metricExtension = metricExtension;
 	}
-	public TrackingExtension getTrackingExtension() {
-		return trackingExtension;
-	}
-	public void setTrackingExtension(TrackingExtension trackingExtension) {
-		this.trackingExtension = trackingExtension;
-	}
 	public WaterFallExtension getWaterFallExtension() {
 		return waterFallExtension;
 	}
 	public void setWaterFallExtension(WaterFallExtension waterFallExtension) {
 		this.waterFallExtension = waterFallExtension;
+	}
+	public TrackingExtension getShowAdtrackingExtension() {
+		return showAdtrackingExtension;
+	}
+	public void setShowAdtrackingExtension(TrackingExtension showAdtrackingExtension) {
+		this.showAdtrackingExtension = showAdtrackingExtension;
+	}
+	public TrackingExtension getVideoAdTrackingExtension() {
+		return videoAdTrackingExtension;
+	}
+	public void setVideoAdTrackingExtension(TrackingExtension videoAdTrackingExtension) {
+		this.videoAdTrackingExtension = videoAdTrackingExtension;
 	}
 	
 	

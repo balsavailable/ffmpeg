@@ -31,7 +31,7 @@ public class GeoExtensionBuilder extends ExtensionBuilder{
 	}
 
 	public GeoExtensionBuilder setBandwidthKbps(String bandwidthKbps) {
-		this.geoExtension.setBandwidth(bandwidthKbps);
+		this.geoExtension.setBandwidthKbps(bandwidthKbps);
 		return this;
 	}
 	

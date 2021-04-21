@@ -9,7 +9,8 @@ public class ExtensionBuilder extends InLineBuilder{
 	private GeoExtensionBuilder geoExtensionBuilder;
 	private MetricExtensionBuilder metricExtensionBuilder;
 	private WaterFallExtensionBuilder waterFallExtensionBuilder;
-	private TrackingExtensionBuilder trackingExtensionBuilder;
+	private TrackingExtensionBuilder showAdTrackingExtensionBuilder;
+	private TrackingExtensionBuilder videoAdTrackingExtensionBuilder;
 
 	public ExtensionBuilder() {
 	
@@ -20,7 +21,8 @@ public class ExtensionBuilder extends InLineBuilder{
 		this.extension = inline.getExtension();
 		this.geoExtensionBuilder = new GeoExtensionBuilder(extension);
 		this.metricExtensionBuilder = new MetricExtensionBuilder(extension);
-		this.trackingExtensionBuilder = new TrackingExtensionBuilder(extension);
+		this.showAdTrackingExtensionBuilder = new TrackingExtensionBuilder(extension,"showAdTrack");
+		this.videoAdTrackingExtensionBuilder =new TrackingExtensionBuilder(extension,"videoAdTrack");
 		this.waterFallExtensionBuilder = new WaterFallExtensionBuilder(extension);
 	}
 
@@ -36,9 +38,16 @@ public class ExtensionBuilder extends InLineBuilder{
 		return waterFallExtensionBuilder;
 	}
 
-	public TrackingExtensionBuilder getTrackingExtensionBuilder() {
-		return trackingExtensionBuilder;
+	public TrackingExtensionBuilder getShowAdTrackingExtensionBuilder() {
+		return showAdTrackingExtensionBuilder;
 	}
+
+
+	public TrackingExtensionBuilder getVideoAdTrackingExtensionBuilder() {
+		return videoAdTrackingExtensionBuilder;
+	}
+
+
 	
 	
 

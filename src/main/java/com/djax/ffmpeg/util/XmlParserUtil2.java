@@ -9,7 +9,9 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.tomcat.util.collections.CaseInsensitiveKeyMap;
 import org.mockito.internal.util.StringUtil;
+import org.springframework.http.converter.protobuf.ExtensionRegistryInitializer;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
@@ -17,16 +19,24 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import com.djax.ffmpeg.builder.AdBuilder;
+import com.djax.ffmpeg.builder.CompanionAdsBuilder;
 import com.djax.ffmpeg.builder.CreativeBuilder;
+import com.djax.ffmpeg.builder.ExtensionBuilder;
+import com.djax.ffmpeg.builder.GeoExtensionBuilder;
 import com.djax.ffmpeg.builder.InLineBuilder;
 import com.djax.ffmpeg.builder.LinearBuilder;
 import com.djax.ffmpeg.builder.MediaFileBuilder;
+import com.djax.ffmpeg.builder.MetricExtensionBuilder;
 import com.djax.ffmpeg.builder.TrackingBuilder;
+import com.djax.ffmpeg.builder.TrackingExtensionBuilder;
+import com.djax.ffmpeg.builder.WaterFallExtensionBuilder;
 import com.djax.ffmpeg.dto.AttributeDTO;
 import com.djax.ffmpeg.dto.NodeDTO;
 import com.djax.ffmpeg.wrapper.Ad;
 import com.djax.ffmpeg.wrapper.Creative;
 import com.djax.ffmpeg.wrapper.MediaFile;
+import com.djax.ffmpeg.wrapper.TrackingEvents;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.jayway.jsonpath.Option;
@@ -132,9 +142,10 @@ public class XmlParserUtil2 {
 
 				for (Node creativeElement : creativeEleList.get()) {
 					CreativeBuilder creativeBuilder = new CreativeBuilder(new Creative());
+
 					// create linear builder for linear child
 					LinearBuilder linearBuilder = creativeBuilder.getLinearBuilder();
-
+					CompanionAdsBuilder companionBuilder = creativeBuilder.getCompanionBuilder();
 					TrackingBuilder trackingBuilder = new TrackingBuilder();
 
 					// set creative id
@@ -243,84 +254,278 @@ public class XmlParserUtil2 {
 					String clickThroughId = idNode != null ? idNode.getNodeValue() : null;
 					String clickThroughText = clickThroughNode.isPresent() ? clickThroughNode.get().getTextContent()
 							: null;
-					if (StringUtils.isNotBlank(clickThroughId)) 
+					if (StringUtils.isNotBlank(clickThroughId))
 						linearBuilder.getVideoClickBuilder().setId(clickThroughId);
-				
-					if (StringUtils.isNotBlank(clickThroughText)) 
-						linearBuilder.getVideoClickBuilder().setText(clickThroughText);
-					
 
-					
+					if (StringUtils.isNotBlank(clickThroughText))
+						linearBuilder.getVideoClickBuilder().setText(clickThroughText);
+
 					// Media File parsing
 					Optional<Node> mediaFilesNode = Optional.ofNullable(thisInstance.getChildNodeFromNList(
 							linearNode.isPresent() ? linearNode.get().getChildNodes() : null, "MediaFiles"));
 					Optional<List<Node>> mediaFileNodeList = Optional.ofNullable(thisInstance.getChildNodesFromNList(
-							mediaFilesNode.isPresent() ? mediaFilesNode.get().getChildNodes() : null,
-							"MediaFile"));
-					
-					for(Node mediaFile:mediaFileNodeList.isPresent()?mediaFileNodeList.get():new ArrayList<Node>())
-					{
-						MediaFileBuilder mediaFileBuilder=new MediaFileBuilder();
-						NamedNodeMap mediaFileAttributes=mediaFile.getAttributes();
-					    Node idAttributeAttr=mediaFileAttributes!=null?mediaFileAttributes.getNamedItem("id"):null;
-					    Node deliveryAttr=mediaFileAttributes!=null?mediaFileAttributes.getNamedItem("delivery"):null;
-					    Node widthAttr=mediaFileAttributes!=null?mediaFileAttributes.getNamedItem("width"):null;
-					    Node heightAttr=mediaFileAttributes!=null?mediaFileAttributes.getNamedItem("height"):null;
-					    Node typeAttr=mediaFileAttributes!=null?mediaFileAttributes.getNamedItem("type"):null;
-					    Node bitrateAttr=mediaFileAttributes!=null?mediaFileAttributes.getNamedItem("bitrate"):null;
-					    Node scalableAttr=mediaFileAttributes!=null?mediaFileAttributes.getNamedItem("scalable"):null;
-					    Node maintainAspectRatioAttr=mediaFileAttributes!=null?mediaFileAttributes.getNamedItem("maintainAspectRatio"):null;
-					    String mediaFileText =mediaFile!=null?mediaFile.getTextContent():null;
-					    
-					    String mediaFileId=idAttributeAttr!=null?idAttributeAttr.getNodeValue():null;
-					    String delivery=deliveryAttr!=null?deliveryAttr.getNodeValue():null;
-					    String width=widthAttr!=null?widthAttr.getNodeValue():null;
-					    String height=heightAttr!=null?heightAttr.getNodeValue():null;
-					    String type=typeAttr!=null?typeAttr.getNodeValue():null;
-					    String bitrate=bitrateAttr!=null?bitrateAttr.getNodeValue():null;
-					    String scalable=scalableAttr!=null?scalableAttr.getNodeValue():null;
-					    String maintainAspectRation=maintainAspectRatioAttr!=null?maintainAspectRatioAttr.getNodeValue():null;
-					    if(StringUtils.isNotBlank(mediaFileId))
-					    mediaFileBuilder.setId(mediaFileId);
-					    if(StringUtils.isNotBlank(mediaFileText))
-					     mediaFileBuilder.setMediaFile(mediaFileText);
-					    if(StringUtils.isNotBlank(delivery))
-					    	mediaFileBuilder.setDelivery(delivery);
-					    if(StringUtils.isNotBlank(delivery))
-					    	mediaFileBuilder.setWidth(width);
-					    if(StringUtils.isNotBlank(width))
-					    	mediaFileBuilder.setWidth(width);
-					    if(StringUtils.isNotBlank(height))
-					    	mediaFileBuilder.setHeight(height);
-					    if(StringUtils.isNotBlank(type))
-					    	mediaFileBuilder.setType(type);
-					    if(StringUtils.isNotBlank(bitrate))
-					    	mediaFileBuilder.setBitrate(bitrate);
-					    if(StringUtils.isNotBlank(scalable))
-					    	mediaFileBuilder.setScalable(scalable);
-					    if(StringUtils.isNotBlank(mediaFileText))
-					    	mediaFileBuilder.setMediaFile(mediaFileText);
-					    linearBuilder.addMediaFile(mediaFileBuilder.build());						
+							mediaFilesNode.isPresent() ? mediaFilesNode.get().getChildNodes() : null, "MediaFile"));
+
+					for (Node mediaFile : mediaFileNodeList.isPresent() ? mediaFileNodeList.get()
+							: new ArrayList<Node>()) {
+						MediaFileBuilder mediaFileBuilder = new MediaFileBuilder();
+						NamedNodeMap mediaFileAttributes = mediaFile.getAttributes();
+						Node idAttributeAttr = mediaFileAttributes != null ? mediaFileAttributes.getNamedItem("id")
+								: null;
+						Node deliveryAttr = mediaFileAttributes != null ? mediaFileAttributes.getNamedItem("delivery")
+								: null;
+						Node widthAttr = mediaFileAttributes != null ? mediaFileAttributes.getNamedItem("width") : null;
+						Node heightAttr = mediaFileAttributes != null ? mediaFileAttributes.getNamedItem("height")
+								: null;
+						Node typeAttr = mediaFileAttributes != null ? mediaFileAttributes.getNamedItem("type") : null;
+						Node bitrateAttr = mediaFileAttributes != null ? mediaFileAttributes.getNamedItem("bitrate")
+								: null;
+						Node scalableAttr = mediaFileAttributes != null ? mediaFileAttributes.getNamedItem("scalable")
+								: null;
+						Node maintainAspectRatioAttr = mediaFileAttributes != null
+								? mediaFileAttributes.getNamedItem("maintainAspectRatio")
+								: null;
+						String mediaFileText = mediaFile != null ? mediaFile.getTextContent() : null;
+
+						String mediaFileId = idAttributeAttr != null ? idAttributeAttr.getNodeValue() : null;
+						String delivery = deliveryAttr != null ? deliveryAttr.getNodeValue() : null;
+						String width = widthAttr != null ? widthAttr.getNodeValue() : null;
+						String height = heightAttr != null ? heightAttr.getNodeValue() : null;
+						String type = typeAttr != null ? typeAttr.getNodeValue() : null;
+						String bitrate = bitrateAttr != null ? bitrateAttr.getNodeValue() : null;
+						String scalable = scalableAttr != null ? scalableAttr.getNodeValue() : null;
+						String maintainAspectRation = maintainAspectRatioAttr != null
+								? maintainAspectRatioAttr.getNodeValue()
+								: null;
+						if (StringUtils.isNotBlank(mediaFileId))
+							mediaFileBuilder.setId(mediaFileId);
+						if (StringUtils.isNotBlank(mediaFileText))
+							mediaFileBuilder.setMediaFile(mediaFileText);
+						if (StringUtils.isNotBlank(delivery))
+							mediaFileBuilder.setDelivery(delivery);
+						if (StringUtils.isNotBlank(delivery))
+							mediaFileBuilder.setWidth(width);
+						if (StringUtils.isNotBlank(width))
+							mediaFileBuilder.setWidth(width);
+						if (StringUtils.isNotBlank(height))
+							mediaFileBuilder.setHeight(height);
+						if (StringUtils.isNotBlank(type))
+							mediaFileBuilder.setType(type);
+						if (StringUtils.isNotBlank(bitrate))
+							mediaFileBuilder.setBitrate(bitrate);
+						if (StringUtils.isNotBlank(scalable))
+							mediaFileBuilder.setScalable(scalable);
+						if (StringUtils.isNotBlank(mediaFileText))
+							mediaFileBuilder.setMediaFile(mediaFileText);
+						linearBuilder.addMediaFile(mediaFileBuilder.build());
 					}
 
-					
-					
-					
-					
 					linearBuilder.addTrackingEvent(trackingBuilder.build());
+
+					// start companion object building
+					CompanionAdsBuilder companionAdsBuilder = creativeBuilder.getCompanionBuilder();
+					Node companionAdsElement = thisInstance.getChildNodeFromNList(creativeElement.getChildNodes(),
+							"CompanionAds");
+					Node companionElement = thisInstance.getChildNodeFromNList(
+							companionAdsElement != null ? companionAdsElement.getChildNodes() : null, "Companion");
+					NamedNodeMap companionAttributes = companionElement != null ? companionElement.getAttributes()
+							: null;
+
+					if (companionAttributes != null) {
+						for (int i = 0; i < companionAttributes.getLength(); i++) {
+							Node nodeAttr = companionAttributes.item(i);
+							String key = nodeAttr != null ? nodeAttr.getNodeName() : null;
+							switch (key != null ? key : "") {
+							case "id":
+								companionAdsBuilder.setId(nodeAttr != null ? nodeAttr.getNodeValue() : null);
+								break;
+							case "width":
+								companionAdsBuilder.setWidth(nodeAttr != null ? nodeAttr.getNodeValue() : null);
+								break;
+							case "height":
+								companionAdsBuilder.setHeight(nodeAttr != null ? nodeAttr.getNodeValue() : null);
+								break;
+							default:
+								break;
+							}
+						}
+					}
+
+					Node trackingEventsElement = thisInstance.getChildNodeFromNList(
+							companionElement != null ? companionElement.getChildNodes() : null, "TrackingEvents");
+					Node trackingElement = thisInstance.getChildNodeFromNList(
+							trackingEventsElement != null ? trackingEventsElement.getChildNodes() : null, "Tracking");
+
+					NamedNodeMap attributes = trackingElement != null ? trackingElement.getAttributes() : null;
+					Node eventAttr = attributes != null ? attributes.getNamedItem("event") : null;
+					String trackingEventType = eventAttr != null ? eventAttr.getNodeValue() : null;
+					String trackingValue = trackingElement != null ? trackingElement.getTextContent() : null;
+					TrackingBuilder trackingEventBuilder = new TrackingBuilder();
+					if (StringUtils.isNotBlank(trackingEventType)) {
+						switch (trackingEventType) {
+						case "creativeView":
+							trackingEventBuilder.setCreativeView(trackingValue);
+							break;
+						default:
+							break;
+						}
+						companionAdsBuilder.setTrackingEvents(trackingEventBuilder.build());
+					}
+
+					// static resource object set
+
+					Node staticResourceElement = thisInstance.getChildNodeFromNList(
+							companionElement != null ? companionElement.getChildNodes() : null, "StaticResource");
+					NamedNodeMap staticResourAttr = staticResourceElement != null
+							? staticResourceElement.getAttributes()
+							: null;
+					Node creativeTypeAttr = staticResourAttr != null ? staticResourAttr.getNamedItem("creativeType")
+							: null;
+					String creativeTypeAttrVal = creativeTypeAttr != null ? creativeTypeAttr.getNodeValue() : null;
+					companionAdsBuilder.getStaticResourceBuilder().setCreativeType(creativeTypeAttrVal);
+
+					String staticResourceText = staticResourceElement != null ? staticResourceElement.getTextContent()
+							: null;
+					companionAdsBuilder.getStaticResourceBuilder().setText(staticResourceText);
+
+					Node companionClickThrough = thisInstance.getChildNodeFromNList(
+							companionElement != null ? companionElement.getChildNodes() : null,
+							"CompanionClickThrough");
+					String companionClickThroghText = companionClickThrough != null
+							? companionClickThrough.getTextContent()
+							: null;
+					companionAdsBuilder.setCompanionClickThrough(companionClickThroghText);
+
 					inlineBuilder.addCreatives(creativeBuilder.build());
 				}
-
 			}
 
-			ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
+			// building extension
+			ExtensionBuilder extensionBuilder = inlineBuilder.getExtensionBuilder();
+			Node extensionNode = thisInstance.getChildNodeFromNList(
+					inLineElement.isPresent() ? inLineElement.get().getChildNodes() : null, "extensions");
+			List<Node> extensionNodes = thisInstance
+					.getChildNodesFromNList(extensionNode != null ? extensionNode.getChildNodes() : null, "extension");
+
+			// int size = extensionNodes.size();
+
+			for (Node extNode : extensionNodes != null ? extensionNodes : new ArrayList<Node>()) {
+				NamedNodeMap extNodeAttr = extNode != null ? extNode.getAttributes() : null;
+				Node typeAttr = extNodeAttr != null ? extNodeAttr.getNamedItem("type") : null;
+				String type = typeAttr != null ? typeAttr.getNodeValue() : null;
+				switch (type) {
+				case "waterfall":
+					thisInstance.buildWaterfallExtension(extensionBuilder.getWaterFallExtensionBuilder(), extNode);
+					break;
+				case "geo":
+					thisInstance.buildGeoExtension(extensionBuilder.getGeoExtensionBuilder(), extNode);
+					break;
+				case "metrics":
+					thisInstance.buildMetricsExtension(extensionBuilder.getMetricExtensionBuilder(), extNode);
+					break;
+				case "ShowAdTracking":
+					thisInstance.buildTrackingExtension(extensionBuilder.getShowAdTrackingExtensionBuilder(), extNode,"showAd");
+					break;
+				case "video_ad_loaded":
+					thisInstance.buildTrackingExtension(extensionBuilder.getVideoAdTrackingExtensionBuilder(), extNode,"videoAd");
+					break;
+				default:
+					break;
+				}
+			}
+
+			ObjectWriter ow = new ObjectMapper().setSerializationInclusion(Include.NON_NULL).writer().withDefaultPrettyPrinter();
 			ad = adBuilder.build();
 			String json = ow.writeValueAsString(ad);
 			System.out.println(json);
+
 			// System.out.println(node.getAttributes().getNamedItem("id").getTextContent());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+
+	public void buildWaterfallExtension(WaterFallExtensionBuilder waterFallExtensionBuilder, Node extensionElement) {
+
+		NamedNodeMap waterFallExtensionAttr = extensionElement != null ? extensionElement.getAttributes() : null;
+		Node typeAttribute = waterFallExtensionAttr != null ? waterFallExtensionAttr.getNamedItem("type") : null;
+		Node fallbackAttribute = waterFallExtensionAttr != null ? waterFallExtensionAttr.getNamedItem("fallback_index")
+				: null;
+		waterFallExtensionBuilder.setType(typeAttribute != null ? typeAttribute.getNodeValue() : null);
+		waterFallExtensionBuilder.setFallbackIndex(fallbackAttribute != null ? fallbackAttribute.getNodeValue() : null);
+	}
+
+	public void buildGeoExtension(GeoExtensionBuilder geoExtensionBuilder, Node extensionElement) {
+		NamedNodeMap geoExtensionAttr = extensionElement != null ? extensionElement.getAttributes() : null;
+		Node typeAttribute = geoExtensionAttr != null ? geoExtensionAttr.getNamedItem("type") : null;
+		geoExtensionBuilder.setType(typeAttribute != null ? typeAttribute.getNodeValue() : null);
+		NodeList geoExtensionChildList = extensionElement != null ? extensionElement.getChildNodes() : null;
+		for (int i = 0; i < (geoExtensionChildList != null ? geoExtensionChildList.getLength() : 0); i++) {
+			Node node = geoExtensionChildList.item(i);
+			String nodeName = node != null ? node.getNodeName() : null;
+			String nodeValue = node != null ? node.getTextContent() : null;
+			switch (nodeName != null ? nodeName : "") {
+			case "Country":
+				geoExtensionBuilder.setCountry(nodeValue);
+				break;
+			case "Bandwidth":
+				geoExtensionBuilder.setBandwidth(nodeValue);
+				break;
+			case "BandwidthKbps":
+				geoExtensionBuilder.setBandwidthKbps(nodeValue);
+				break;
+			default:
+				break;
+			}
+		}
+	}
+
+	public void buildMetricsExtension(MetricExtensionBuilder metricExtensionBuilder, Node extensionElement) {
+
+		NamedNodeMap metricsExtensionAttr = extensionElement != null ? extensionElement.getAttributes() : null;
+		Node typeAttribute = metricsExtensionAttr != null ? metricsExtensionAttr.getNamedItem("type") : null;
+		metricExtensionBuilder.setType(typeAttribute != null ? typeAttribute.getNodeValue() : null);
+		NodeList metricsExtensionChildList = extensionElement != null ? extensionElement.getChildNodes() : null;
+		for (int i = 0; i < (metricsExtensionChildList != null ? metricsExtensionChildList.getLength() : 0); i++) {
+			Node node = metricsExtensionChildList.item(i);
+			String nodeName = node != null ? node.getNodeName() : null;
+			String nodeValue = node != null ? node.getTextContent() : null;
+			switch (nodeName != null ? nodeName : "") {
+			case "FeEventId":
+				metricExtensionBuilder.setFeEventId(nodeValue);
+				break;
+			case "AdEventId":
+				metricExtensionBuilder.setAdEventId(nodeValue);
+				break;
+			default:
+				break;
+			}
+		}
+
+	}
+
+	public void buildTrackingExtension(TrackingExtensionBuilder trackingExtensionBuider, Node extensionElement,String trackingType) {
+		NamedNodeMap metricsExtensionAttr = extensionElement != null ? extensionElement.getAttributes() : null;
+		Node typeAttribute = metricsExtensionAttr != null ? metricsExtensionAttr.getNamedItem("type") : null;
+		trackingExtensionBuider.setType(typeAttribute != null ? typeAttribute.getNodeValue() : null);
+		Node customTrackingNode = getChildNodeFromNList(
+				extensionElement != null ? extensionElement.getChildNodes() : null, "customtracking");
+		Node trackingNode = getChildNodeFromNList(
+				customTrackingNode != null ? customTrackingNode.getChildNodes() : null, "tracking");
+//		NamedNodeMap attrs = trackingNode != null ? trackingNode.getAttributes() : null;
+//		Node eventAttr = attrs!=null?attrs.getNamedItem("event"):null;
+		String eventVal=trackingNode!=null?trackingNode.getTextContent():null;
+		if(trackingType.equals("showAd"))
+		{
+			trackingExtensionBuider.getCustomTrackingBuilder().setShowAd(eventVal);
+			
+		}
+		else if(trackingType.equals("videoAd"))
+		{
+			trackingExtensionBuider.getCustomTrackingBuilder().setLoaded(eventVal);
+		}
+
+
 	}
 
 	public Node getChildNodeFromNList(NodeList nodeList, String key) {

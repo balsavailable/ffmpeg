@@ -14,11 +14,15 @@ public class TrackingExtensionBuilder extends ExtensionBuilder {
 
 	}
 
-	public TrackingExtensionBuilder(Extension extension) {
+	public TrackingExtensionBuilder(Extension extension, String extensionName) {
 		trackingExtension = new TrackingExtension();
 		trackingExtension.setCustomTracking(new CustomTracking());
 		trackingBuilder = new CustomTrackingBuilder(trackingExtension.getCustomTracking());
-		extension.setTrackingExtension(trackingExtension);
+		if (extensionName.equals("videoAdTrack")) {
+			extension.setVideoAdTrackingExtension(trackingExtension);
+		} else if(extensionName.equals("showAdTrack")) {
+			extension.setShowAdtrackingExtension(trackingExtension);
+		}
 
 	}
 
@@ -31,5 +35,4 @@ public class TrackingExtensionBuilder extends ExtensionBuilder {
 		return this;
 	}
 
-	
 }
