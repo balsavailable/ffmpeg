@@ -9,11 +9,9 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.tomcat.util.collections.CaseInsensitiveKeyMap;
-import org.mockito.internal.util.StringUtil;
-import org.springframework.http.converter.protobuf.ExtensionRegistryInitializer;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -30,23 +28,26 @@ import com.djax.ffmpeg.builder.MetricExtensionBuilder;
 import com.djax.ffmpeg.builder.TrackingBuilder;
 import com.djax.ffmpeg.builder.TrackingExtensionBuilder;
 import com.djax.ffmpeg.builder.WaterFallExtensionBuilder;
+import com.djax.ffmpeg.data.PersistXmlData;
 import com.djax.ffmpeg.dto.AttributeDTO;
 import com.djax.ffmpeg.dto.NodeDTO;
+import com.djax.ffmpeg.dto.XmlData;
 import com.djax.ffmpeg.wrapper.Ad;
 import com.djax.ffmpeg.wrapper.Creative;
-import com.djax.ffmpeg.wrapper.MediaFile;
-import com.djax.ffmpeg.wrapper.TrackingEvents;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import com.jayway.jsonpath.Option;
 
+@Component
 public class XmlParserUtil2 {
 
 	private static List<NodeDTO> nodeList = new ArrayList<>();
 	private static List<AttributeDTO> attributeList = new ArrayList<>();
 
-	public static void main(String[] args) {
+	@Autowired
+	PersistXmlData persistXmlData;
+
+	public void main(String[] args) {
 		try {
 			Ad ad = null;
 			AdBuilder adBuilder = new AdBuilder(new Ad());
@@ -424,10 +425,12 @@ public class XmlParserUtil2 {
 					thisInstance.buildMetricsExtension(extensionBuilder.getMetricExtensionBuilder(), extNode);
 					break;
 				case "ShowAdTracking":
-					thisInstance.buildTrackingExtension(extensionBuilder.getShowAdTrackingExtensionBuilder(), extNode,"showAd");
+					thisInstance.buildTrackingExtension(extensionBuilder.getShowAdTrackingExtensionBuilder(), extNode,
+							"showAd");
 					break;
 				case "video_ad_loaded":
-					thisInstance.buildTrackingExtension(extensionBuilder.getVideoAdTrackingExtensionBuilder(), extNode,"videoAd");
+					thisInstance.buildTrackingExtension(extensionBuilder.getVideoAdTrackingExtensionBuilder(), extNode,
+							"videoAd");
 					break;
 				default:
 					break;
@@ -437,6 +440,10 @@ public class XmlParserUtil2 {
 			ObjectWriter ow = new ObjectMapper().setSerializationInclusion(Include.NON_NULL).writer().withDefaultPrettyPrinter();
 			ad = adBuilder.build();
 			String json = ow.writeValueAsString(ad);
+			XmlData xmlData = new XmlData();
+			xmlData.setJson(json);
+			xmlData.setType("vast");
+			this.persistXmlData.persistXmlData(xmlData);
 			System.out.println(json);
 
 			// System.out.println(node.getAttributes().getNamedItem("id").getTextContent());
@@ -504,7 +511,8 @@ public class XmlParserUtil2 {
 
 	}
 
-	public void buildTrackingExtension(TrackingExtensionBuilder trackingExtensionBuider, Node extensionElement,String trackingType) {
+	public void buildTrackingExtension(TrackingExtensionBuilder trackingExtensionBuider, Node extensionElement,
+			String trackingType) {
 		NamedNodeMap metricsExtensionAttr = extensionElement != null ? extensionElement.getAttributes() : null;
 		Node typeAttribute = metricsExtensionAttr != null ? metricsExtensionAttr.getNamedItem("type") : null;
 		trackingExtensionBuider.setType(typeAttribute != null ? typeAttribute.getNodeValue() : null);
@@ -512,19 +520,16 @@ public class XmlParserUtil2 {
 				extensionElement != null ? extensionElement.getChildNodes() : null, "customtracking");
 		Node trackingNode = getChildNodeFromNList(
 				customTrackingNode != null ? customTrackingNode.getChildNodes() : null, "tracking");
-//		NamedNodeMap attrs = trackingNode != null ? trackingNode.getAttributes() : null;
-//		Node eventAttr = attrs!=null?attrs.getNamedItem("event"):null;
-		String eventVal=trackingNode!=null?trackingNode.getTextContent():null;
-		if(trackingType.equals("showAd"))
-		{
+		// NamedNodeMap attrs = trackingNode != null ? trackingNode.getAttributes() :
+		// null;
+		// Node eventAttr = attrs!=null?attrs.getNamedItem("event"):null;
+		String eventVal = trackingNode != null ? trackingNode.getTextContent() : null;
+		if (trackingType.equals("showAd")) {
 			trackingExtensionBuider.getCustomTrackingBuilder().setShowAd(eventVal);
-			
-		}
-		else if(trackingType.equals("videoAd"))
-		{
+
+		} else if (trackingType.equals("videoAd")) {
 			trackingExtensionBuider.getCustomTrackingBuilder().setLoaded(eventVal);
 		}
-
 
 	}
 
